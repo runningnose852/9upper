@@ -151,6 +151,7 @@ export default function PrivateBluffGamePrototype() {
   
     return () => unsubscribe();
   }, [房間碼]);
+  
   const 目前題目 = 題庫[題目索引];
 
   const 玩家卡牌 = useMemo<玩家卡[]>(() => {
@@ -182,7 +183,7 @@ export default function PrivateBluffGamePrototype() {
         set遠端房間(房間資料);
         set畫面("房間");
       };
-      
+
       const 加入房間 = async () => {
         try {
           const code = 加入碼 || "ABCD";
@@ -196,7 +197,6 @@ export default function PrivateBluffGamePrototype() {
           alert("房間不存在");
         }
       };
-
 
   const 開始回合 = () => {
     const 最終名單 = 正規化玩家名單(玩家輸入, 建立者名稱);
