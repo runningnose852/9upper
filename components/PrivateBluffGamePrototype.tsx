@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, Trophy, Eye, MessageSquare, Play, Smartphone } from "lucide-react";
+import { Users, Eye, MessageSquare, Play, Smartphone } from "lucide-react";
 import { startRound, setRoomPhase } from "@/lib/rooms";
 import { createRoom, joinRoom, subscribeToRoom, type RoomData } from "@/lib/rooms";
 
@@ -355,23 +355,7 @@ export default function PrivateBluffGamePrototype() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-3xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Trophy className="h-5 w-5" /> 分數榜
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Object.entries(分數)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([名字, 分]) => (
-                    <div key={名字} className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3">
-                      <span className="font-medium text-slate-800">{名字}</span>
-                      <span className="text-lg font-bold text-slate-900">{分}</span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
+
           </div>
         )}
 
@@ -471,21 +455,6 @@ export default function PrivateBluffGamePrototype() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-3xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-xl">最新分數</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Object.entries(分數)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([名字, 分]) => (
-                    <div key={名字} className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3">
-                      <span className="font-medium text-slate-800">{名字}</span>
-                      <span className="text-lg font-bold text-slate-900">{分}</span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
           </div>
         )}
 
