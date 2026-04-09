@@ -200,7 +200,7 @@ export default function PrivateBluffGamePrototype() {
         set遠端房間(房間資料);
         set畫面("房間");
       };
-
+      
       const 加入房間 = async () => {
         try {
           const code = 加入碼 || "ABCD";
@@ -214,50 +214,31 @@ export default function PrivateBluffGamePrototype() {
           alert("房間不存在");
         }
       };
-
+      
       const 開始回合 = async () => {
         await startRound(房間碼, 題庫.length);
       };
-    const 最終名單 = 正規化玩家名單(玩家輸入, 建立者名稱);
-    const 抽中真玩家 = 最終名單[Math.floor(Math.random() * 最終名單.length)] || 最終名單[0];
-
-    set玩家列表(最終名單);
-    set分數((舊分數) => {
-      const 新分數 = 建立初始分數(最終名單);
-      for (const 玩家 of 最終名單) {
-        if (typeof 舊分數[玩家] === "number") {
-          新分數[玩家] = 舊分數[玩家];
-        }
-      }
-      return 新分數;
-    });
-    set真玩家(抽中真玩家);
-    set目前玩家(最終名單[0]);
-    set已揭示(false);
-    set畫面("私人卡");
-  };
-
-  const 全部同時揭示 = () => {
-    set已揭示(true);
-  };
-
-  const 進入討論 = async () => {
-    await setRoomPhase(房間碼, "discussion");
-  };
-  
-  const 揭曉答案 = async () => {
-    await setRoomPhase(房間碼, "reveal");
-  };
-
-
-  const 下一回合 = () => {
-    const { 下一題, 剩餘牌庫 } = 抽下一題(題目索引, 未出題索引);
-    set回合((n) => n + 1);
-    set題目索引(下一題);
-    set未出題索引(剩餘牌庫);
-    set畫面("房間");
-    set已揭示(false);
-  };
+      
+      const 全部同時揭示 = () => {
+        set已揭示(true);
+      };
+      
+      const 進入討論 = async () => {
+        await setRoomPhase(房間碼, "discussion");
+      };
+      
+      const 揭曉答案 = async () => {
+        await setRoomPhase(房間碼, "reveal");
+      };
+      
+      const 下一回合 = () => {
+        const { 下一題, 剩餘牌庫 } = 抽下一題(題目索引, 未出題索引);
+        set回合((n) => n + 1);
+        set題目索引(下一題);
+        set未出題索引(剩餘牌庫);
+        set畫面("房間");
+        set已揭示(false);
+      };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
