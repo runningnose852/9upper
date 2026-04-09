@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Users, Trophy, Eye, MessageSquare, Play, Smartphone } from "lucide-react";
+import { createRoom, joinRoom, subscribeToRoom, type RoomData } from "@/lib/rooms";
 
 type 題目 = {
   詞語: string;
@@ -118,6 +119,7 @@ function 抽下一題(目前索引: number, 未出題索引: number[]) {
 
 export default function PrivateBluffGamePrototype() {
   const [畫面, set畫面] = useState<畫面>("首頁");
+  const [遠端房間, set遠端房間] = useState<RoomData | null>(null);
   const [建立者名稱, set建立者名稱] = useState("Wan Ling");
   const [加入碼, set加入碼] = useState("");
   const [房間碼, set房間碼] = useState("");
@@ -136,7 +138,19 @@ export default function PrivateBluffGamePrototype() {
     Chris: 3,
     Jo: 2,
   });
-
+  
+  useEffect(() => {
+    if (!房間碼) return;
+  
+    const unsubscribe = subscribeToRoom(房間碼, (room) => {
+      set遠端房間(room);
+      if (room) {
+        set玩家列表(room.players.map((p) => p.name));
+      }
+    });
+  
+    return () => unsubscribe();
+  }, [房間碼]);
   const 目前題目 = 題庫[題目索引];
 
   const 玩家卡牌 = useMemo<玩家卡[]>(() => {
@@ -150,6 +164,7 @@ export default function PrivateBluffGamePrototype() {
           : "你不知道真正答案。請作一個可信但假的解釋。",
       };
     });
+
   }, [玩家列表, 真玩家, 目前題目]);
 
   const 目前卡牌 = 玩家卡牌.find((x) => x.玩家 === 目前玩家);
@@ -158,27 +173,30 @@ export default function PrivateBluffGamePrototype() {
   const 進度 =
     畫面 === "首頁" ? 10 : 畫面 === "房間" ? 30 : 畫面 === "私人卡" ? 60 : 畫面 === "討論" ? 80 : 100;
 
-  const 建立房間 = () => {
-    const 最終名單 = 正規化玩家名單(玩家輸入, 建立者名稱);
-    set玩家列表(最終名單);
-    set分數((舊分數) => {
-      const 新分數 = 建立初始分數(最終名單);
-      for (const 玩家 of 最終名單) {
-        if (typeof 舊分數[玩家] === "number") {
-          新分數[玩家] = 舊分數[玩家];
+    const 建立房間 = async () => {
+        const 新房間碼 = 產生房間碼();
+        const 房間資料 = await createRoom(新房間碼, 建立者名稱);
+      
+        set房間碼(新房間碼);
+        set玩家列表(房間資料.players.map((p) => p.name));
+        set遠端房間(房間資料);
+        set畫面("房間");
+      };
+      
+      const 加入房間 = async () => {
+        try {
+          const code = 加入碼 || "ABCD";
+          const 房間資料 = await joinRoom(code, 建立者名稱);
+      
+          set房間碼(code);
+          set玩家列表(房間資料.players.map((p) => p.name));
+          set遠端房間(房間資料);
+          set畫面("房間");
+        } catch {
+          alert("房間不存在");
         }
-      }
-      return 新分數;
-    });
-    set房間碼(產生房間碼());
-    set目前玩家(最終名單[0]);
-    set畫面("房間");
-  };
+      };
 
-  const 加入房間 = () => {
-    set房間碼(加入碼 || "ABCD");
-    set畫面("房間");
-  };
 
   const 開始回合 = () => {
     const 最終名單 = 正規化玩家名單(玩家輸入, 建立者名稱);
@@ -501,9 +519,3 @@ export default function PrivateBluffGamePrototype() {
     </div>
   );
 }
-
-export const __tests__ = {
-  正規化玩家名單,
-  建立洗牌牌庫,
-  抽下一題,
-};
