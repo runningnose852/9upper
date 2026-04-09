@@ -11,6 +11,7 @@ import { Users, Trophy, Eye, MessageSquare, Play, Smartphone } from "lucide-reac
 import { startRound, setRoomPhase } from "@/lib/rooms";
 import { createRoom, joinRoom, subscribeToRoom, type RoomData } from "@/lib/rooms";
 
+
 type 題目 = {
   詞語: string;
   類別: string;
@@ -119,6 +120,7 @@ function 抽下一題(目前索引: number, 未出題索引: number[]) {
 }
 
 export default function PrivateBluffGamePrototype() {
+  const [我的玩家ID, set我的玩家ID] = useState<string>("");
   const [畫面, set畫面] = useState<畫面>("首頁");
   const [遠端房間, set遠端房間] = useState<RoomData | null>(null);
   const [建立者名稱, set建立者名稱] = useState("Wan Ling");
@@ -139,6 +141,15 @@ export default function PrivateBluffGamePrototype() {
     Chris: 3,
     Jo: 2,
   });
+  
+  useEffect(() => {
+    const savedPlayerId =
+      typeof window !== "undefined" ? localStorage.getItem("playerId") : null;
+  
+    if (savedPlayerId) {
+      set我的玩家ID(savedPlayerId);
+    }
+  }, []);
   
   useEffect(() => {
     if (!房間碼) return;
@@ -171,6 +182,11 @@ export default function PrivateBluffGamePrototype() {
 
   const 目前題目 = 題庫[題目索引];
 
+  const 我的私人卡 =
+  我的玩家ID && 遠端房間?.privateCards
+    ? 遠端房間.privateCards[我的玩家ID]
+    : null;
+
   const 玩家卡牌 = useMemo<玩家卡[]>(() => {
     return 玩家列表.map((玩家) => {
       const 是否真玩家 = 玩家 === 真玩家;
@@ -198,17 +214,21 @@ export default function PrivateBluffGamePrototype() {
         set房間碼(新房間碼);
         set玩家列表(房間資料.players.map((p) => p.name));
         set遠端房間(房間資料);
+        set我的玩家ID(房間資料.myPlayerId);
+        localStorage.setItem("playerId", 房間資料.myPlayerId);
         set畫面("房間");
       };
       
       const 加入房間 = async () => {
         try {
           const code = 加入碼 || "ABCD";
-          const 房間資料 = await joinRoom(code, 建立者名稱);
+          const 結果 = await joinRoom(code, 建立者名稱);
       
           set房間碼(code);
-          set玩家列表(房間資料.players.map((p) => p.name));
-          set遠端房間(房間資料);
+          set玩家列表(結果.room.players.map((p) => p.name));
+          set遠端房間(結果.room);
+          set我的玩家ID(結果.myPlayerId);
+          localStorage.setItem("playerId", 結果.myPlayerId);
           set畫面("房間");
         } catch {
           alert("房間不存在");
@@ -216,7 +236,7 @@ export default function PrivateBluffGamePrototype() {
       };
       
       const 開始回合 = async () => {
-        await startRound(房間碼, 題庫.length);
+        await startRound(房間碼, 題庫);
       };
       
       const 全部同時揭示 = () => {
@@ -355,86 +375,55 @@ export default function PrivateBluffGamePrototype() {
           </div>
         )}
 
-        {畫面 === "私人卡" && (
-          <div className="space-y-6">
-            <Card className="rounded-3xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Smartphone className="h-5 w-5" /> 同時揭示私人卡牌
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-2xl bg-slate-100 p-4 text-slate-800">
-                  <div className="text-sm text-slate-500">本回合題目</div>
-                  <div className="mt-1 text-2xl font-bold">{目前題目.詞語}</div>
-                  <div className="mt-2 text-sm text-slate-600">類別：{目前題目.類別}</div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {玩家列表.map((玩家) => (
-                    <Button
-                      key={玩家}
-                      variant={目前玩家 === 玩家 ? "default" : "outline"}
-                      className="rounded-full"
-                      onClick={() => set目前玩家(玩家)}
-                    >
-                      {玩家}
-                    </Button>
-                  ))}
-                </div>
-                <div className="rounded-2xl border p-5">
-                  {!已揭示 ? (
-                    <div className="space-y-3 text-center">
-                      <div className="text-lg font-semibold text-slate-900">{目前玩家} 的私人卡牌</div>
-                      <p className="text-slate-600">
-                        實際上線版中，包括主持人在內，所有玩家都會在自己的手機同時看到各自的私人卡牌。
-                      </p>
-                      <Button className="rounded-2xl" onClick={全部同時揭示}>
-                        同時揭示卡牌
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="text-sm text-slate-500">玩家</div>
-                      <div className="text-xl font-bold text-slate-900">{目前卡牌?.玩家}</div>
-                      <Badge className="rounded-full px-3 py-1 text-sm">
-                        {目前卡牌?.身份 === "真玩家" ? "真玩家" : "吹水玩家"}
-                      </Badge>
-                      <div className="rounded-2xl bg-slate-100 p-4 text-slate-800">
-                        <div className="text-sm text-slate-500">題目</div>
-                        <div className="mt-1 font-semibold">{目前題目.詞語}</div>
-                        <div className="mt-2 text-sm text-slate-600">類別：{目前題目.類別}</div>
-                      </div>
-                      <div className="rounded-2xl bg-slate-100 p-4 text-slate-800">{目前卡牌?.內容}</div>
-                    </div>
-                  )}
-                </div>
-                {已揭示 && (
-                  <Button className="rounded-2xl" onClick={進入討論}>
-                    進入討論階段
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+{畫面 === "私人卡" && (
+  <div className="space-y-4">
+    <Card className="rounded-3xl shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Eye className="h-5 w-5" /> 私人卡牌
+        </CardTitle>
+      </CardHeader>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              {隨機排序(玩家卡牌).map((卡) => (
-                <Card key={卡.玩家} className="rounded-3xl shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{卡.玩家}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm">
-                      {已揭示 ? 卡.身份 : "未揭示"}
-                    </Badge>
-                    <div className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-700">
-                      {已揭示 ? 卡.內容 : "等待主持人開始同時揭示。"}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+      <CardContent>
+        {!已揭示 ? (
+          <div className="space-y-3 text-center">
+            <div className="text-lg font-semibold text-slate-900">
+              準備查看你的身份
+            </div>
+            <p className="text-slate-600">
+              每位玩家只會在自己的裝置看到自己的卡牌
+            </p>
+            <Button className="rounded-2xl" onClick={全部同時揭示}>
+              顯示我的卡牌
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Badge className="rounded-full px-3 py-1 text-sm">
+              {遠端房間?.truthPlayerId === 我的玩家ID
+                ? "真玩家"
+                : "吹水玩家"}
+            </Badge>
+
+            <div className="rounded-2xl bg-slate-100 p-4">
+              <div className="text-sm text-slate-500">題目</div>
+              <div className="font-semibold text-slate-900">
+                {目前題目.詞語}
+              </div>
+              <div className="text-sm text-slate-600">
+                類別：{目前題目.類別}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-100 p-4 text-slate-800">
+              {我的私人卡 || "尚未生成卡牌"}
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
+  </div>
+)}
 
         {畫面 === "討論" && (
           <Card className="rounded-3xl shadow-sm">

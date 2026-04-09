@@ -15,28 +15,33 @@ import {
   export type RoomData = {
     roomCode: string;
     hostName: string;
+    hostPlayerId: string;
     phase: "lobby" | "privateCards" | "discussion" | "reveal";
     round: number;
     createdAt: number;
     players: Player[];
     currentPromptIndex?: number;
     truthPlayerId?: string;
+    privateCards?: Record<string, string>;
   };
   
   export async function createRoom(roomCode: string, hostName: string) {
     const roomRef = doc(db, "rooms", roomCode);
+    const hostPlayerId = crypto.randomUUID();
   
     const data: RoomData = {
       roomCode,
       hostName,
+      hostPlayerId,
       phase: "lobby",
       round: 1,
       createdAt: Date.now(),
-      players: [{ id: crypto.randomUUID(), name: hostName }],
+      players: [{ id: hostPlayerId, name: hostName }],
+      privateCards: {},
     };
   
     await setDoc(roomRef, data);
-    return data;
+    return { ...data, myPlayerId: hostPlayerId };
   }
   
   export async function joinRoom(roomCode: string, playerName: string) {
@@ -48,13 +53,16 @@ import {
     }
   
     const data = snap.data() as RoomData;
-    const alreadyExists = data.players.some((p) => p.name === playerName);
+    const existing = data.players.find((p) => p.name === playerName);
   
-    if (alreadyExists) return data;
+    if (existing) {
+      return { room: data, myPlayerId: existing.id };
+    }
   
+    const newPlayerId = crypto.randomUUID();
     const updatedPlayers = [
       ...data.players,
-      { id: crypto.randomUUID(), name: playerName },
+      { id: newPlayerId, name: playerName },
     ];
   
     await updateDoc(roomRef, {
@@ -62,9 +70,12 @@ import {
     });
   
     return {
-      ...data,
-      players: updatedPlayers,
-    } as RoomData;
+      room: {
+        ...data,
+        players: updatedPlayers,
+      } as RoomData,
+      myPlayerId: newPlayerId,
+    };
   }
   
   export function subscribeToRoom(
@@ -82,7 +93,10 @@ import {
     });
   }
   
-  export async function startRound(roomCode: string, 題目數量: number) {
+  export async function startRound(
+    roomCode: string,
+    題庫: { 真相: string }[]
+  ) {
     const roomRef = doc(db, "rooms", roomCode);
     const snap = await getDoc(roomRef);
   
@@ -91,13 +105,24 @@ import {
     }
   
     const data = snap.data() as RoomData;
+    const promptIndex = Math.floor(Math.random() * 題庫.length);
     const truthPlayer =
       data.players[Math.floor(Math.random() * data.players.length)];
   
+    const privateCards: Record<string, string> = {};
+  
+    for (const player of data.players) {
+      privateCards[player.id] =
+        player.id === truthPlayer.id
+          ? `你知道真正答案：${題庫[promptIndex].真相}`
+          : "你不知道真正答案。請作一個可信但假的解釋。";
+    }
+  
     await updateDoc(roomRef, {
       phase: "privateCards",
+      currentPromptIndex: promptIndex,
       truthPlayerId: truthPlayer.id,
-      currentPromptIndex: Math.floor(Math.random() * 題目數量),
+      privateCards,
     });
   }
   
