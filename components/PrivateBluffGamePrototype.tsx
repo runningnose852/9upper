@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Users, Trophy, Eye, MessageSquare, Play, Smartphone } from "lucide-react";
+import { startRound, setRoomPhase } from "@/lib/rooms";
 import { createRoom, joinRoom, subscribeToRoom, type RoomData } from "@/lib/rooms";
 
 type 題目 = {
@@ -144,14 +145,30 @@ export default function PrivateBluffGamePrototype() {
   
     const unsubscribe = subscribeToRoom(房間碼, (room) => {
       set遠端房間(room);
-      if (room) {
-        set玩家列表(room.players.map((p) => p.name));
+  
+      if (!room) return;
+  
+      set玩家列表(room.players.map((p) => p.name));
+  
+      if (typeof room.currentPromptIndex === "number") {
+        set題目索引(room.currentPromptIndex);
       }
+  
+      if (room.truthPlayerId) {
+        const truthPlayerName =
+          room.players.find((p) => p.id === room.truthPlayerId)?.name || "Alex";
+        set真玩家(truthPlayerName);
+      }
+  
+      if (room.phase === "lobby") set畫面("房間");
+      if (room.phase === "privateCards") set畫面("私人卡");
+      if (room.phase === "discussion") set畫面("討論");
+      if (room.phase === "reveal") set畫面("揭曉");
     });
   
     return () => unsubscribe();
   }, [房間碼]);
-  
+
   const 目前題目 = 題庫[題目索引];
 
   const 玩家卡牌 = useMemo<玩家卡[]>(() => {
@@ -198,7 +215,9 @@ export default function PrivateBluffGamePrototype() {
         }
       };
 
-  const 開始回合 = () => {
+      const 開始回合 = async () => {
+        await startRound(房間碼, 題庫.length);
+      };
     const 最終名單 = 正規化玩家名單(玩家輸入, 建立者名稱);
     const 抽中真玩家 = 最終名單[Math.floor(Math.random() * 最終名單.length)] || 最終名單[0];
 
@@ -222,11 +241,15 @@ export default function PrivateBluffGamePrototype() {
     set已揭示(true);
   };
 
-  const 進入討論 = () => {
+  const 進入討論 = async () => {
+    await setRoomPhase(房間碼, "discussion");
+  };
     set畫面("討論");
   };
 
-  const 揭曉答案 = () => {
+  const 揭曉答案 = async () => {
+    await setRoomPhase(房間碼, "reveal");
+  };
     set分數((目前分數) => ({
       ...目前分數,
       [真玩家]: (目前分數[真玩家] || 0) + 3,
