@@ -244,18 +244,11 @@ export default function PrivateBluffGamePrototype() {
   const 進入討論 = async () => {
     await setRoomPhase(房間碼, "discussion");
   };
-    set畫面("討論");
-  };
-
+  
   const 揭曉答案 = async () => {
     await setRoomPhase(房間碼, "reveal");
   };
-    set分數((目前分數) => ({
-      ...目前分數,
-      [真玩家]: (目前分數[真玩家] || 0) + 3,
-    }));
-    set畫面("揭曉");
-  };
+
 
   const 下一回合 = () => {
     const { 下一題, 剩餘牌庫 } = 抽下一題(題目索引, 未出題索引);
